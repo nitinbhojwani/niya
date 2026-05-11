@@ -1,0 +1,54 @@
+[workspace]
+members = ["crates/*"]
+resolver = "2"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+
+[workspace.dependencies]
+# Async runtime
+tokio = { version = "1", features = ["full"] }
+async-trait = "0.1"
+futures = "0.3"
+
+# Serialization
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+serde_yaml = "0.9"
+
+# HTTP
+reqwest = { version = "0.12", features = ["json", "stream"] }
+reqwest-eventsource = "0.6"
+
+# CLI
+clap = { version = "4", features = ["derive"] }
+crossterm = "0.28"
+
+# Error handling
+thiserror = "2"
+anyhow = "1"
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# File system
+glob = "0.3"
+grep-regex = "0.1"
+walkdir = "2"
+ignore = "0.4"
+
+# Misc
+uuid = { version = "1", features = ["v4"] }
+chrono = { version = "0.4", features = ["serde"] }
+regex = "1"
+dirs = "5"
+
+# Internal crates
+nexus-core = { path = "crates/nexus-core" }
+nexus-config = { path = "crates/nexus-config" }
+nexus-providers = { path = "crates/nexus-providers" }
+nexus-tools = { path = "crates/nexus-tools" }
+nexus-cli = { path = "crates/nexus-cli" }

@@ -1,0 +1,21 @@
+# Build artifacts
+/target/
+**/*.rs.bk
+
+# IDE / editor
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Environment
+.env
+.env.*
+
+# Session logs (may contain sensitive conversation data)
+.nexus/sessions/
+
+# OS
+Thumbs.db
