@@ -121,6 +121,12 @@ impl SessionLogger {
     }
 }
 
+impl Drop for SessionLogger {
+    fn drop(&mut self) {
+        let _ = self.flush();
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

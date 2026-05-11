@@ -5,6 +5,7 @@
 
 use anyhow::Result;
 use std::io::{self, Write};
+use tokio::sync::mpsc;
 
 use nexus_config::ResolvedConfig;
 use nexus_core::Orchestrator;
@@ -15,8 +16,10 @@ use crate::renderer::Renderer;
 /// Run a single prompt and print the response (non-interactive mode).
 pub async fn run_oneshot(mut orchestrator: Orchestrator, prompt: &str) -> Result<()> {
     let renderer = Renderer::new(false, false);
+    let (approval_tx, approval_rx) = create_approval_channels();
+    let mut approval_rx = Some(approval_rx);
     let events = orchestrator
-        .run(prompt.to_string(), None, &mut None)
+        .run(prompt.to_string(), Some(approval_tx), &mut approval_rx)
         .await;
 
     for event in &events {
@@ -39,8 +42,10 @@ pub async fn run_interactive(
     // If we have an initial prompt, run it first
     if let Some(prompt) = initial_prompt {
         renderer.print_user_prompt(prompt);
+        let (approval_tx, approval_rx) = create_approval_channels();
+        let mut approval_rx = Some(approval_rx);
         let events = orchestrator
-            .run(prompt.to_string(), None, &mut None)
+            .run(prompt.to_string(), Some(approval_tx), &mut approval_rx)
             .await;
         for event in &events {
             renderer.render(event);
@@ -105,8 +110,10 @@ pub async fn run_interactive(
         }
 
         // Regular message — send to orchestrator
+        let (approval_tx, approval_rx) = create_approval_channels();
+        let mut approval_rx = Some(approval_rx);
         let events = orchestrator
-            .run(trimmed.to_string(), None, &mut None)
+            .run(trimmed.to_string(), Some(approval_tx), &mut approval_rx)
             .await;
 
         for event in &events {
@@ -131,4 +138,32 @@ fn read_input(renderer: &Renderer) -> Result<Option<String>> {
         Ok(_) => Ok(Some(line)),
         Err(e) => Err(e.into()),
     }
+}
+
+fn create_approval_channels() -> (mpsc::Sender<bool>, mpsc::Receiver<bool>) {
+    let (request_tx, mut request_rx) = mpsc::channel::<bool>(8);
+    let (decision_tx, decision_rx) = mpsc::channel::<bool>(8);
+
+    tokio::spawn(async move {
+        while request_rx.recv().await.is_some() {
+            let approved = tokio::task::spawn_blocking(|| {
+                let mut answer = String::new();
+                print!("Approve tool execution? [y/N]: ");
+                let _ = io::stdout().flush();
+                if io::stdin().read_line(&mut answer).is_ok() {
+                    matches!(answer.trim().to_ascii_lowercase().as_str(), "y" | "yes")
+                } else {
+                    false
+                }
+            })
+            .await
+            .unwrap_or(false);
+
+            if decision_tx.send(approved).await.is_err() {
+                break;
+            }
+        }
+    });
+
+    (request_tx, decision_rx)
 }

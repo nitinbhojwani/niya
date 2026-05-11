@@ -36,6 +36,8 @@ pub struct ContextManager {
     pinned_files: Vec<PinnedFile>,
     conversation: Vec<Message>,
     context_window_size: usize,
+    project_instruction_file: String,
+    max_project_context_lines: usize,
     usage: TokenUsage,
 }
 
@@ -54,14 +56,26 @@ impl ContextManager {
             pinned_files: Vec::new(),
             conversation: Vec::new(),
             context_window_size,
+            project_instruction_file: "NEXUS.md".to_string(),
+            max_project_context_lines: 200,
             usage: TokenUsage::default(),
         }
+    }
+
+    /// Configure project-context loading behavior.
+    pub fn configure_project_context(
+        &mut self,
+        project_instruction_file: impl Into<String>,
+        max_project_context_lines: usize,
+    ) {
+        self.project_instruction_file = project_instruction_file.into();
+        self.max_project_context_lines = max_project_context_lines.max(1);
     }
 
     /// Initialize with project root — gathers README, NEXUS.md, directory tree.
     pub async fn init(&mut self, project_root: &Path) -> anyhow::Result<()> {
         // Load NEXUS.md if it exists
-        let instructions_path = project_root.join("NEXUS.md");
+        let instructions_path = project_root.join(&self.project_instruction_file);
         if instructions_path.exists() {
             let content = tokio::fs::read_to_string(&instructions_path).await?;
             self.project_instructions = Some(content);
@@ -75,7 +89,7 @@ impl ContextManager {
                 // Truncate to first 200 lines
                 let truncated: String = content
                     .lines()
-                    .take(200)
+                    .take(self.max_project_context_lines)
                     .collect::<Vec<_>>()
                     .join("\n");
                 self.project_context
@@ -113,7 +127,7 @@ impl ContextManager {
         let content = tokio::fs::read_to_string(&resolved).await?;
 
         // Truncate very large files
-        let max_lines = 500;
+        let max_lines = self.max_project_context_lines;
         let truncated: String = content
             .lines()
             .take(max_lines)

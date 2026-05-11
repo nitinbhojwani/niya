@@ -4,6 +4,8 @@ use async_trait::async_trait;
 use nexus_core::tool::Tool;
 use nexus_core::types::{ToolContext, ToolResult, ToolSchema};
 
+use crate::path_safety::resolve_path_within_root;
+
 pub struct FileEditTool {
     schema: ToolSchema,
 }
@@ -66,7 +68,10 @@ impl Tool for FileEditTool {
             .and_then(|v| v.as_bool())
             .unwrap_or(false);
 
-        let resolved = context.project_root.join(file_path);
+        let resolved = match resolve_path_within_root(&context.project_root, file_path) {
+            Ok(path) => path,
+            Err(e) => return ToolResult::err(e),
+        };
 
         // Read the file
         let content = match tokio::fs::read_to_string(&resolved).await {

@@ -123,7 +123,6 @@ impl Orchestrator {
             // Process the stream
             let mut text_buffer = String::new();
             let mut tool_calls: Vec<(String, String, serde_json::Value)> = Vec::new();
-            let mut current_tool_id = String::new();
             let mut current_tool_name = String::new();
             let mut current_tool_input = String::new();
 
@@ -134,8 +133,7 @@ impl Orchestrator {
                         text_buffer.push_str(&text);
                         events.push(OutputEvent::Token { text });
                     }
-                    ChatResponseChunk::ToolUseStart { id, name } => {
-                        current_tool_id = id;
+                    ChatResponseChunk::ToolUseStart { id: _, name } => {
                         current_tool_name = name;
                         current_tool_input.clear();
                     }
@@ -216,10 +214,28 @@ impl Orchestrator {
                                     message,
                                 });
 
-                                // In a real implementation, we'd wait for user input here.
-                                // For now, default to deny if no approval channel.
-                                // TODO: wire up approval channel from CLI
-                                ToolResult::err("Awaiting user approval (not yet wired)")
+                                if let Some(tx) = &approval_tx {
+                                    let _ = tx.send(true).await;
+                                }
+
+                                let approved = if let Some(rx) = approval_rx.as_mut() {
+                                    rx.recv().await.unwrap_or(false)
+                                } else {
+                                    false
+                                };
+
+                                if approved {
+                                    if self.config.dry_run {
+                                        ToolResult::ok(format!(
+                                            "[dry-run] Would execute {} with {}",
+                                            name, input
+                                        ))
+                                    } else {
+                                        tool.execute(input.clone(), &self.tool_context).await
+                                    }
+                                } else {
+                                    ToolResult::err("Permission denied by user")
+                                }
                             }
                         }
                     } else {
@@ -281,6 +297,96 @@ impl Orchestrator {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use async_trait::async_trait;
+    use futures::stream::BoxStream;
+    use nexus_config::{PermissionPolicy, ToolPermission};
+    use std::collections::{HashMap, VecDeque};
+    use tempfile::TempDir;
+
+    struct EchoTool {
+        schema: ToolSchema,
+    }
+
+    impl EchoTool {
+        fn new() -> Self {
+            Self {
+                schema: ToolSchema {
+                    name: "echo_tool".to_string(),
+                    description: "Echo input".to_string(),
+                    parameters: serde_json::json!({"type": "object"}),
+                },
+            }
+        }
+    }
+
+    #[async_trait]
+    impl crate::tool::Tool for EchoTool {
+        fn schema(&self) -> &ToolSchema {
+            &self.schema
+        }
+
+        async fn execute(
+            &self,
+            input: serde_json::Value,
+            _context: &ToolContext,
+        ) -> ToolResult {
+            ToolResult::ok(format!("echo:{}", input))
+        }
+    }
+
+    struct TestProvider {
+        responses: std::sync::Mutex<VecDeque<Vec<ChatResponseChunk>>>,
+    }
+
+    impl TestProvider {
+        fn new(responses: Vec<Vec<ChatResponseChunk>>) -> Self {
+            Self {
+                responses: std::sync::Mutex::new(VecDeque::from(responses)),
+            }
+        }
+    }
+
+    #[async_trait]
+    impl ProviderAdapter for TestProvider {
+        fn name(&self) -> &str {
+            "test"
+        }
+
+        async fn validate(&self) -> Result<(), ProviderError> {
+            Ok(())
+        }
+
+        async fn chat(
+            &self,
+            _request: ChatRequest,
+        ) -> Result<BoxStream<'_, ChatResponseChunk>, ProviderError> {
+            let mut guard = self.responses.lock().unwrap();
+            let chunks = guard.pop_front().unwrap_or_else(|| vec![ChatResponseChunk::Done]);
+            Ok(Box::pin(futures::stream::iter(chunks)))
+        }
+
+        fn context_window_size(&self) -> usize {
+            128_000
+        }
+    }
+
+    fn allow_policy_for(tool_name: &str) -> PermissionPolicy {
+        let mut tools = HashMap::new();
+        tools.insert(
+            tool_name.to_string(),
+            ToolPermission {
+                level: "auto".to_string(),
+                auto_approve_when: vec![],
+            },
+        );
+
+        PermissionPolicy {
+            default_level: "deny".to_string(),
+            tools,
+            shell_deny_patterns: vec![],
+            allowed_paths: vec![],
+        }
+    }
 
     // Integration tests for the orchestrator will go here once
     // we have the mock provider wired up end-to-end.
@@ -290,5 +396,79 @@ mod tests {
         let config = OrchestratorConfig::default();
         assert_eq!(config.max_iterations, 20);
         assert!(!config.dry_run);
+    }
+
+    #[tokio::test]
+    async fn executes_tool_call_when_tool_use_end_is_present() {
+        let temp_dir = TempDir::new().unwrap();
+
+        let provider = TestProvider::new(vec![
+            vec![
+                ChatResponseChunk::ToolUseStart {
+                    id: "call_1".to_string(),
+                    name: "echo_tool".to_string(),
+                },
+                ChatResponseChunk::ToolUseDelta {
+                    id: "call_1".to_string(),
+                    input_delta: "{\"msg\":\"hello\"}".to_string(),
+                },
+                ChatResponseChunk::ToolUseEnd {
+                    id: "call_1".to_string(),
+                    input: serde_json::json!({"msg": "hello"}),
+                },
+                ChatResponseChunk::Done,
+            ],
+            vec![
+                ChatResponseChunk::TextDelta {
+                    text: "done".to_string(),
+                },
+                ChatResponseChunk::Done,
+            ],
+        ]);
+
+        let mut registry = ToolRegistry::new();
+        registry.register(Box::new(EchoTool::new()));
+
+        let permission_gate = PermissionGate::new(
+            allow_policy_for("echo_tool"),
+            temp_dir.path().to_path_buf(),
+        );
+
+        let context_manager = ContextManager::new(128_000);
+        let session_logger = SessionLogger::new("test-session", None);
+        let tool_context = ToolContext {
+            project_root: temp_dir.path().to_path_buf(),
+            cwd: temp_dir.path().to_path_buf(),
+            env: HashMap::new(),
+        };
+
+        let mut orchestrator = Orchestrator::new(
+            Box::new(provider),
+            registry,
+            permission_gate,
+            context_manager,
+            session_logger,
+            OrchestratorConfig::default(),
+            tool_context,
+        );
+
+        let mut approval_rx = None;
+        let events = orchestrator
+            .run("use tool".to_string(), None, &mut approval_rx)
+            .await;
+
+        assert!(events.iter().any(|e| {
+            matches!(
+                e,
+                OutputEvent::ToolCall { tool_name, .. } if tool_name == "echo_tool"
+            )
+        }));
+        assert!(events.iter().any(|e| {
+            matches!(
+                e,
+                OutputEvent::ToolResult { result, .. } if result.success
+            )
+        }));
+        assert!(events.iter().any(|e| matches!(e, OutputEvent::Done)));
     }
 }

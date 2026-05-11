@@ -4,6 +4,8 @@ use async_trait::async_trait;
 use nexus_core::tool::Tool;
 use nexus_core::types::{ToolContext, ToolResult, ToolSchema};
 
+use crate::path_safety::resolve_path_within_root;
+
 pub struct FileWriteTool {
     schema: ToolSchema,
 }
@@ -49,7 +51,10 @@ impl Tool for FileWriteTool {
             None => return ToolResult::err("Missing required parameter: content"),
         };
 
-        let resolved = context.project_root.join(file_path);
+        let resolved = match resolve_path_within_root(&context.project_root, file_path) {
+            Ok(path) => path,
+            Err(e) => return ToolResult::err(e),
+        };
 
         // Create parent directories
         if let Some(parent) = resolved.parent() {

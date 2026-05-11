@@ -6,7 +6,6 @@
 
 use regex::Regex;
 use std::collections::HashSet;
-use std::path::Path;
 use std::sync::Mutex;
 
 use crate::types::{PermissionDecision, ToolSchema};
@@ -64,11 +63,69 @@ impl PermissionGate {
             "file_read" | "file_write" | "file_edit"
         ) {
             if let Some(path_str) = args.get("file_path").and_then(|v| v.as_str()) {
-                let resolved = self.project_root.join(path_str);
-                if let Ok(canonical) = resolved.canonicalize() {
-                    if !canonical.starts_with(&self.project_root) {
+                let canonical_root = match self.project_root.canonicalize() {
+                    Ok(root) => root,
+                    Err(_) => {
                         return PermissionDecision::Deny {
-                            reason: "Path is outside the project root".to_string(),
+                            reason: "Failed to resolve project root".to_string(),
+                        }
+                    }
+                };
+
+                let joined = canonical_root.join(path_str);
+                let canonical_target = if joined.exists() {
+                    match joined.canonicalize() {
+                        Ok(path) => path,
+                        Err(_) => {
+                            return PermissionDecision::Deny {
+                                reason: "Failed to resolve target path".to_string(),
+                            }
+                        }
+                    }
+                } else {
+                    let parent = match joined.parent() {
+                        Some(parent) => parent,
+                        None => {
+                            return PermissionDecision::Deny {
+                                reason: "Invalid target path".to_string(),
+                            }
+                        }
+                    };
+
+                    let canonical_parent = match parent.canonicalize() {
+                        Ok(path) => path,
+                        Err(_) => {
+                            return PermissionDecision::Deny {
+                                reason: "Parent path does not exist".to_string(),
+                            }
+                        }
+                    };
+
+                    let file_name = match joined.file_name() {
+                        Some(name) => name,
+                        None => {
+                            return PermissionDecision::Deny {
+                                reason: "Invalid target file name".to_string(),
+                            }
+                        }
+                    };
+
+                    canonical_parent.join(file_name)
+                };
+
+                if !canonical_target.starts_with(&canonical_root) {
+                    return PermissionDecision::Deny {
+                        reason: "Path is outside the project root".to_string(),
+                    };
+                }
+
+                if !self.policy.allowed_paths.is_empty() {
+                    let is_allowed = self.policy.allowed_paths.iter().any(|allowed| {
+                        canonical_target.starts_with(canonical_root.join(allowed))
+                    });
+                    if !is_allowed {
+                        return PermissionDecision::Deny {
+                            reason: "Path is outside allowed_paths policy".to_string(),
                         };
                     }
                 }
@@ -125,6 +182,7 @@ mod tests {
     use super::*;
     use nexus_config::{ArgCondition, ToolPermission};
     use std::collections::HashMap;
+    use tempfile::TempDir;
 
     fn test_policy() -> PermissionPolicy {
         let mut tools = HashMap::new();
@@ -164,7 +222,9 @@ mod tests {
 
     #[test]
     fn auto_level_allows_immediately() {
-        let gate = PermissionGate::new(test_policy(), "/tmp/project");
+        let dir = TempDir::new().unwrap();
+        std::fs::create_dir_all(dir.path().join("src")).unwrap();
+        let gate = PermissionGate::new(test_policy(), dir.path());
         let decision = gate.check(
             &tool_schema("file_read"),
             &serde_json::json!({"file_path": "src/main.rs"}),
@@ -174,7 +234,8 @@ mod tests {
 
     #[test]
     fn deny_list_blocks_dangerous_commands() {
-        let gate = PermissionGate::new(test_policy(), "/tmp/project");
+        let dir = TempDir::new().unwrap();
+        let gate = PermissionGate::new(test_policy(), dir.path());
         let decision = gate.check(
             &tool_schema("shell_execute"),
             &serde_json::json!({"command": "rm -rf /"}),
@@ -184,7 +245,8 @@ mod tests {
 
     #[test]
     fn auto_approve_condition_matches() {
-        let gate = PermissionGate::new(test_policy(), "/tmp/project");
+        let dir = TempDir::new().unwrap();
+        let gate = PermissionGate::new(test_policy(), dir.path());
         let decision = gate.check(
             &tool_schema("shell_execute"),
             &serde_json::json!({"command": "cargo test"}),
@@ -194,7 +256,8 @@ mod tests {
 
     #[test]
     fn ask_level_prompts_for_unknown_commands() {
-        let gate = PermissionGate::new(test_policy(), "/tmp/project");
+        let dir = TempDir::new().unwrap();
+        let gate = PermissionGate::new(test_policy(), dir.path());
         let decision = gate.check(
             &tool_schema("shell_execute"),
             &serde_json::json!({"command": "npm install express"}),
@@ -204,7 +267,8 @@ mod tests {
 
     #[test]
     fn session_override_upgrades_to_auto() {
-        let gate = PermissionGate::new(test_policy(), "/tmp/project");
+        let dir = TempDir::new().unwrap();
+        let gate = PermissionGate::new(test_policy(), dir.path());
         // First check should ask
         let decision = gate.check(
             &tool_schema("shell_execute"),

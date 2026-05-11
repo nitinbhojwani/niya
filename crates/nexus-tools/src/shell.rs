@@ -9,10 +9,15 @@ use tokio::process::Command;
 pub struct ShellExecuteTool {
     schema: ToolSchema,
     output_limit: usize,
+    default_timeout_ms: u64,
 }
 
 impl ShellExecuteTool {
     pub fn new() -> Self {
+        Self::with_limits(30_000, 100_000)
+    }
+
+    pub fn with_limits(default_timeout_ms: u64, output_limit: usize) -> Self {
         Self {
             schema: ToolSchema {
                 name: "shell_execute".to_string(),
@@ -37,7 +42,8 @@ impl ShellExecuteTool {
                     }
                 }),
             },
-            output_limit: 100_000,
+            output_limit,
+            default_timeout_ms,
         }
     }
 }
@@ -63,7 +69,7 @@ impl Tool for ShellExecuteTool {
         let timeout_ms = input
             .get("timeout")
             .and_then(|v| v.as_u64())
-            .unwrap_or(30_000);
+            .unwrap_or(self.default_timeout_ms);
 
         let result = tokio::time::timeout(
             std::time::Duration::from_millis(timeout_ms),

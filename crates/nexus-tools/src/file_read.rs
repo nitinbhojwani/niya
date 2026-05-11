@@ -3,7 +3,8 @@
 use async_trait::async_trait;
 use nexus_core::tool::Tool;
 use nexus_core::types::{ToolContext, ToolResult, ToolSchema};
-use std::path::Path;
+
+use crate::path_safety::resolve_path_within_root;
 
 pub struct FileReadTool {
     schema: ToolSchema,
@@ -54,28 +55,13 @@ impl Tool for FileReadTool {
         let offset = input.get("offset").and_then(|v| v.as_u64()).unwrap_or(0) as usize;
         let limit = input.get("limit").and_then(|v| v.as_u64()).unwrap_or(2000) as usize;
 
-        let resolved = context.project_root.join(file_path);
-
-        // Safety: check the path is within project root
-        let canonical_resolved = match resolved.canonicalize() {
+        let resolved = match resolve_path_within_root(&context.project_root, file_path) {
             Ok(path) => path,
-            Err(_) => {
-                // File might not exist yet, but check parent directory exists
-                if !resolved.exists() {
-                    return ToolResult::err(format!("File not found: {}", file_path));
-                }
-                resolved.clone()
-            }
+            Err(e) => return ToolResult::err(e),
         };
 
-        // Canonicalize both paths for comparison to handle symlinks and different representations
-        let canonical_root = match context.project_root.canonicalize() {
-            Ok(path) => path,
-            Err(_) => context.project_root.clone(),
-        };
-
-        if !canonical_resolved.starts_with(&canonical_root) {
-            return ToolResult::err("Path is outside the project root");
+        if !resolved.exists() {
+            return ToolResult::err(format!("File not found: {}", file_path));
         }
 
         // Read the file
@@ -108,6 +94,7 @@ impl Tool for FileReadTool {
 mod tests {
     use super::*;
     use std::collections::HashMap;
+    use std::path::Path;
     use tempfile::TempDir;
 
     fn test_context(dir: &Path) -> ToolContext {

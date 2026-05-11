@@ -7,7 +7,7 @@ use async_trait::async_trait;
 use futures::stream::BoxStream;
 use futures::StreamExt;
 use reqwest::Client;
-use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 use nexus_core::provider::ProviderAdapter;
 use nexus_core::types::{
@@ -228,6 +228,8 @@ impl ProviderAdapter for OpenAiCompatAdapter {
 /// Parse Server-Sent Events text into ChatResponseChunk values.
 fn parse_sse_chunks(text: &str) -> Option<Vec<ChatResponseChunk>> {
     let mut chunks = Vec::new();
+    let mut tool_ids_by_index: HashMap<usize, String> = HashMap::new();
+    let mut tool_args_by_index: HashMap<usize, String> = HashMap::new();
 
     for line in text.lines() {
         let line = line.trim();
@@ -259,6 +261,11 @@ fn parse_sse_chunks(text: &str) -> Option<Vec<ChatResponseChunk>> {
                                 delta.get("tool_calls").and_then(|tc| tc.as_array())
                             {
                                 for tc in tool_calls {
+                                    let index = tc
+                                        .get("index")
+                                        .and_then(|i| i.as_u64())
+                                        .unwrap_or(0) as usize;
+
                                     if let Some(function) = tc.get("function") {
                                         let id = tc
                                             .get("id")
@@ -266,11 +273,20 @@ fn parse_sse_chunks(text: &str) -> Option<Vec<ChatResponseChunk>> {
                                             .unwrap_or("")
                                             .to_string();
 
+                                        if !id.is_empty() {
+                                            tool_ids_by_index.insert(index, id.clone());
+                                        }
+
+                                        let tool_id = tool_ids_by_index
+                                            .get(&index)
+                                            .cloned()
+                                            .unwrap_or_else(|| format!("tool_{}", index));
+
                                         if let Some(name) =
                                             function.get("name").and_then(|n| n.as_str())
                                         {
                                             chunks.push(ChatResponseChunk::ToolUseStart {
-                                                id: id.clone(),
+                                                id: tool_id.clone(),
                                                 name: name.to_string(),
                                             });
                                         }
@@ -279,8 +295,15 @@ fn parse_sse_chunks(text: &str) -> Option<Vec<ChatResponseChunk>> {
                                             function.get("arguments").and_then(|a| a.as_str())
                                         {
                                             if !args.is_empty() {
+                                                tool_args_by_index
+                                                    .entry(index)
+                                                    .and_modify(|existing| {
+                                                        existing.push_str(args)
+                                                    })
+                                                    .or_insert_with(|| args.to_string());
+
                                                 chunks.push(ChatResponseChunk::ToolUseDelta {
-                                                    id: id.clone(),
+                                                    id: tool_id.clone(),
                                                     input_delta: args.to_string(),
                                                 });
                                             }
@@ -294,9 +317,25 @@ fn parse_sse_chunks(text: &str) -> Option<Vec<ChatResponseChunk>> {
                         if let Some(finish) =
                             choice.get("finish_reason").and_then(|f| f.as_str())
                         {
-                            if finish == "tool_calls" || finish == "stop" {
-                                // For tool_calls, we need to emit ToolUseEnd
-                                // This is handled by accumulating deltas
+                            if finish == "tool_calls" {
+                                for (index, args) in &tool_args_by_index {
+                                    let id = tool_ids_by_index
+                                        .get(index)
+                                        .cloned()
+                                        .unwrap_or_else(|| format!("tool_{}", index));
+
+                                    let parsed_input = serde_json::from_str::<serde_json::Value>(
+                                        args,
+                                    )
+                                    .unwrap_or_else(|_| {
+                                        serde_json::json!({ "raw_arguments": args })
+                                    });
+
+                                    chunks.push(ChatResponseChunk::ToolUseEnd {
+                                        id,
+                                        input: parsed_input,
+                                    });
+                                }
                             }
                         }
                     }
@@ -353,6 +392,23 @@ mod tests {
     fn parse_sse_ignores_empty_lines() {
         let chunks = parse_sse_chunks("\n\n: comment\n");
         assert!(chunks.is_none());
+    }
+
+    #[test]
+    fn parse_sse_emits_tool_use_end_on_tool_finish() {
+        let sse = r#"data: {"choices":[{"delta":{"tool_calls":[{"index":0,"id":"call_1","function":{"name":"file_read","arguments":"{\"file_path\":\"src/main.rs\"}"}}]},"finish_reason":"tool_calls"}]}"#;
+
+        let chunks = parse_sse_chunks(sse).unwrap();
+        assert!(
+            chunks
+                .iter()
+                .any(|c| matches!(c, ChatResponseChunk::ToolUseStart { name, .. } if name == "file_read"))
+        );
+        assert!(
+            chunks
+                .iter()
+                .any(|c| matches!(c, ChatResponseChunk::ToolUseEnd { id, .. } if id == "call_1"))
+        );
     }
 
     #[test]

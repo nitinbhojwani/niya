@@ -114,9 +114,18 @@ async fn main() -> Result<()> {
         128_000, // default context window; TODO: make configurable per-provider
     );
 
+    adapter
+        .validate()
+        .await
+        .map_err(|e| anyhow::anyhow!("Provider validation failed: {}", e))?;
+
     // Build the tool registry
     let mut tool_registry = nexus_core::ToolRegistry::new();
-    nexus_tools::register_all(&mut tool_registry);
+    nexus_tools::register_all_with_config(
+        &mut tool_registry,
+        config.session.shell_timeout,
+        config.session.shell_output_limit,
+    );
 
     // Build the permission gate
     let permission_gate =
@@ -125,6 +134,10 @@ async fn main() -> Result<()> {
     // Build the context manager
     let context_window = adapter.context_window_size();
     let mut context_manager = nexus_core::ContextManager::new(context_window);
+    context_manager.configure_project_context(
+        config.context.project_instruction_file.clone(),
+        config.context.max_project_context_lines,
+    );
     context_manager.init(&project_root).await?;
 
     // Build the session logger
