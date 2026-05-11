@@ -7,7 +7,7 @@ use anyhow::Result;
 use std::io::{self, Write};
 
 use nexus_config::ResolvedConfig;
-use nexus_core::{Orchestrator, OutputEvent};
+use nexus_core::Orchestrator;
 
 use crate::commands::{self, SlashCommand};
 use crate::renderer::Renderer;

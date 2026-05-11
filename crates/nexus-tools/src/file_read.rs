@@ -57,18 +57,25 @@ impl Tool for FileReadTool {
         let resolved = context.project_root.join(file_path);
 
         // Safety: check the path is within project root
-        match resolved.canonicalize() {
-            Ok(canonical) => {
-                if !canonical.starts_with(&context.project_root) {
-                    return ToolResult::err("Path is outside the project root");
-                }
-            }
+        let canonical_resolved = match resolved.canonicalize() {
+            Ok(path) => path,
             Err(_) => {
-                // File might not exist yet, check parent
+                // File might not exist yet, but check parent directory exists
                 if !resolved.exists() {
                     return ToolResult::err(format!("File not found: {}", file_path));
                 }
+                resolved.clone()
             }
+        };
+
+        // Canonicalize both paths for comparison to handle symlinks and different representations
+        let canonical_root = match context.project_root.canonicalize() {
+            Ok(path) => path,
+            Err(_) => context.project_root.clone(),
+        };
+
+        if !canonical_resolved.starts_with(&canonical_root) {
+            return ToolResult::err("Path is outside the project root");
         }
 
         // Read the file

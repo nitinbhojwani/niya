@@ -165,7 +165,7 @@ impl Renderer {
         }
     }
 
-    fn print_tool_result(&self, tool_name: &str, result: &nexus_core::ToolResult) {
+    fn print_tool_result(&self, _tool_name: &str, result: &nexus_core::ToolResult) {
         let icon = if result.success { "✔" } else { "✘" };
         let preview = truncate(&result.output, 200);
 
@@ -181,7 +181,7 @@ impl Renderer {
         }
     }
 
-    fn print_approval_request(&self, tool_name: &str, message: &str) {
+    fn print_approval_request(&self, _tool_name: &str, message: &str) {
         if self.color {
             eprintln!(
                 "\n{} {} {}",
