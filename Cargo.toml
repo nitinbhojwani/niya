@@ -6,6 +6,8 @@ resolver = "2"
 version = "0.1.0"
 edition = "2021"
 license = "MIT OR Apache-2.0"
+repository = "https://github.com/nitinbhojwani/niya"
+homepage = "https://github.com/nitinbhojwani/niya"
 
 [workspace.dependencies]
 # Async runtime
@@ -51,4 +53,4 @@ niya-core = { path = "crates/niya-core" }
 niya-config = { path = "crates/niya-config" }
 niya-providers = { path = "crates/niya-providers" }
 niya-tools = { path = "crates/niya-tools" }
-niya-cli = { path = "crates/niya-cli" }
+niya = { path = "crates/niya" }

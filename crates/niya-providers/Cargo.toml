@@ -3,6 +3,11 @@ name = "niya-providers"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+description = "Provider adapters for model and streaming backends in Niya"
+keywords = ["provider", "llm", "streaming"]
+categories = ["development-tools"]
 
 [dependencies]
 niya-core = { workspace = true }
