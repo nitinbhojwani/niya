@@ -15,7 +15,7 @@
 .env.*
 
 # Session logs (may contain sensitive conversation data)
-.nexus/sessions/
+.niya/sessions/
 
 # OS
 Thumbs.db

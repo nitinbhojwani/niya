@@ -1,4 +1,4 @@
-# Nexus — Architecture Overview
+# Niya — Architecture Overview
 
 **Scope:** Phase 1 (MVP)  
 **Date:** 2026-05-11  
@@ -8,9 +8,9 @@
 
 ## 1. Introduction
 
-This document describes the high-level architecture of Nexus's MVP. It identifies the major components, their responsibilities, how they interact, and the key design decisions that shape the system.
+This document describes the high-level architecture of Niya's MVP. It identifies the major components, their responsibilities, how they interact, and the key design decisions that shape the system.
 
-The MVP delivers Nexus, a CLI-based coding agent that connects to multiple LLM providers (cloud and local), reads and modifies project files, executes shell commands, and manages conversational context — all within a permission-controlled environment.
+The MVP delivers Niya, a CLI-based coding agent that connects to multiple LLM providers (cloud and local), reads and modifies project files, executes shell commands, and manages conversational context — all within a permission-controlled environment.
 
 ---
 
@@ -95,7 +95,7 @@ The MVP delivers Nexus, a CLI-based coding agent that connects to multiple LLM p
 1. User types a message in the REPL (CLI Interface)
 2. CLI Interface passes the message to the Agent Orchestrator
 3. Context Manager assembles the full prompt:
-   - System prompt + project instructions (NEXUS.md)
+   - System prompt + project instructions (NIYA.md)
    - Conversation history
    - Available tool schemas
    - User message
@@ -137,7 +137,7 @@ Adapters do only three things: translate the internal message format to the prov
 
 ### 6.4 Configuration Layering
 
-Settings are merged with a clear precedence: CLI flags > environment variables > project config (`.nexus/config.yaml`) > global config (`~/.nexus/config.yaml`) > defaults. Each layer is optional.
+Settings are merged with a clear precedence: CLI flags > environment variables > project config (`.niya/config.yaml`) > global config (`~/.niya/config.yaml`) > defaults. Each layer is optional.
 
 ### 6.5 Session Logging as a Core Feature
 

@@ -1,4 +1,4 @@
-# Nexus — Requirements Specification
+# Niya — Requirements Specification
 
 **Version:** 1.0  
 **Date:** 2026-05-11  
@@ -8,7 +8,7 @@
 
 ## 1. Overview
 
-This document specifies the requirements for Nexus, a CLI-based coding agent that leverages one or more Large Language Model (LLM) providers — including cloud APIs and locally-running models — to assist developers with code generation, editing, debugging, and project understanding. The agent operates inside the developer's terminal, has access to their project files, and can execute shell commands on their behalf.
+This document specifies the requirements for Niya, a CLI-based coding agent that leverages one or more Large Language Model (LLM) providers — including cloud APIs and locally-running models — to assist developers with code generation, editing, debugging, and project understanding. The agent operates inside the developer's terminal, has access to their project files, and can execute shell commands on their behalf.
 
 The product is designed in three phases. Phase 1 (MVP) targets individual developers with core agentic coding capabilities. Phase 2 adds the integrations, extensibility, and polish needed for daily professional use. Phase 3 introduces team-oriented features and enterprise readiness.
 
@@ -18,7 +18,7 @@ The product is designed in three phases. Phase 1 (MVP) targets individual develo
 
 | Term | Definition |
 |---|---|
-| **Nexus (the Agent)** | The software system that interprets user intent, plans actions, invokes tools, and produces outputs. |
+| **Niya (the Agent)** | The software system that interprets user intent, plans actions, invokes tools, and produces outputs. |
 | **Provider** | An LLM backend (e.g., Anthropic API, OpenAI API, Ollama, llama.cpp) that the agent calls for inference. |
 | **Tool** | A capability the agent can invoke: read/write files, run shell commands, search the web, etc. |
 | **Context window** | The maximum token budget available for a single inference call to the provider. |
@@ -83,11 +83,11 @@ The system is composed of four layers: the CLI interface that the user interacts
 
 | ID | Requirement | Priority |
 |---|---|---|
-| CLI-01 | The agent launches from a single command (e.g., `nexus`) in any terminal emulator on macOS and Linux. | Must |
-| CLI-02 | The agent accepts a natural-language prompt as a positional argument for non-interactive use (e.g., `nexus "fix the failing tests"`). | Must |
+| CLI-01 | The agent launches from a single command (e.g., `niya`) in any terminal emulator on macOS and Linux. | Must |
+| CLI-02 | The agent accepts a natural-language prompt as a positional argument for non-interactive use (e.g., `niya "fix the failing tests"`). | Must |
 | CLI-03 | The agent supports an interactive REPL mode with streaming token output. | Must |
 | CLI-04 | The REPL supports common line-editing shortcuts (arrow keys, Ctrl-C to cancel, Ctrl-D to exit). | Must |
-| CLI-05 | The agent can read from stdin/pipe (e.g., `git diff | nexus "review this diff"`). | Should |
+| CLI-05 | The agent can read from stdin/pipe (e.g., `git diff | niya "review this diff"`). | Should |
 | CLI-06 | The agent displays a clear distinction between its own reasoning/output and tool invocations (e.g., file edits, shell commands). | Must |
 | CLI-07 | The agent renders markdown in terminal output (bold, code blocks, headings) for readability. | Should |
 
@@ -97,7 +97,7 @@ The system is composed of four layers: the CLI interface that the user interacts
 |---|---|---|
 | PROV-01 | The agent supports at least two cloud LLM providers (e.g., Anthropic Claude, OpenAI GPT) at launch. | Must |
 | PROV-02 | The agent supports at least one local model runtime (e.g., Ollama, llama.cpp) at launch. | Must |
-| PROV-03 | Provider configuration (API keys, base URLs, model names) is stored in a user-level config file (e.g., `~/.nexus/config.yaml`). | Must |
+| PROV-03 | Provider configuration (API keys, base URLs, model names) is stored in a user-level config file (e.g., `~/.niya/config.yaml`). | Must |
 | PROV-04 | The user can switch providers/models via a CLI flag (`--provider`, `--model`) or config default. | Must |
 | PROV-05 | The provider abstraction normalises request/response formats so the orchestrator is provider-agnostic. | Must |
 | PROV-06 | API key validation occurs at startup with a clear error message on failure. | Must |
@@ -133,15 +133,15 @@ The system is composed of four layers: the CLI interface that the user interacts
 | CTX-02 | The agent tracks token usage and warns the user when approaching the provider's context window limit. | Must |
 | CTX-03 | The agent supports a conversation history within a session, enabling multi-turn interactions. | Must |
 | CTX-04 | The user can manually add files or URLs to the context via commands (e.g., `/add src/main.py`). | Should |
-| CTX-05 | The agent supports a project-level instruction file (e.g., `NEXUS.md`) that is automatically loaded into context at session start. | Should |
+| CTX-05 | The agent supports a project-level instruction file (e.g., `NIYA.md`) that is automatically loaded into context at session start. | Should |
 
 #### 5.1.6 Installation and Configuration
 
 | ID | Requirement | Priority |
 |---|---|---|
-| INST-01 | The agent is installable via npm (`npm install -g @nexus/cli`) and as a standalone binary (no runtime dependency). | Must |
+| INST-01 | The agent is installable via npm (`npm install -g @niya/cli`) and as a standalone binary (no runtime dependency). | Must |
 | INST-02 | First-run setup guides the user through provider configuration interactively. | Should |
-| INST-03 | Configuration supports both global (`~/.nexus/`) and project-level (`.nexus/`) settings, with project-level taking precedence. | Must |
+| INST-03 | Configuration supports both global (`~/.niya/`) and project-level (`.niya/`) settings, with project-level taking precedence. | Must |
 
 #### Phase 1 — Acceptance Criteria
 
@@ -162,7 +162,7 @@ The system is composed of four layers: the CLI interface that the user interacts
 | ID | Requirement | Priority |
 |---|---|---|
 | EXT-01 | The agent supports MCP (Model Context Protocol) servers, allowing external tools (databases, APIs, documentation sources) to be connected. | Must |
-| EXT-02 | Users can install and manage MCP servers via CLI commands (e.g., `nexus mcp add`, `nexus mcp list`). | Must |
+| EXT-02 | Users can install and manage MCP servers via CLI commands (e.g., `niya mcp add`, `niya mcp list`). | Must |
 | EXT-03 | The agent supports user-defined hooks that execute at lifecycle events: pre-tool-call, post-tool-call, session-start, session-end, notification. | Must |
 | EXT-04 | The agent supports slash commands (e.g., `/review`, `/test`, `/commit`) that map to predefined or user-defined workflows. | Should |
 | EXT-05 | A plugin/skill system allows packaging and distributing reusable agent behaviours (prompts + tools + hooks). | Should |
@@ -295,7 +295,7 @@ The system is composed of four layers: the CLI interface that the user interacts
 | NFR-09 | **Scalability:** The centralised deployment (Phase 3) supports at least 100 concurrent users per instance. | 3 |
 | NFR-10 | **Error Handling:** The agent provides clear, actionable error messages for all failure modes — provider errors, file permission issues, malformed input, and partial tool failures mid-workflow. It recovers gracefully rather than crashing. | 1 |
 | NFR-11 | **Documentation and Help:** The agent ships with `--help` for all commands and sub-commands, an in-session `/help` command, and hosted user documentation. | 1 |
-| NFR-12 | **Self-Update:** The CLI supports a self-update mechanism (e.g., `nexus update`) that checks for and installs new versions with rollback on failure. | 2 |
+| NFR-12 | **Self-Update:** The CLI supports a self-update mechanism (e.g., `niya update`) that checks for and installs new versions with rollback on failure. | 2 |
 | NFR-13 | **Testing and CI:** The project maintains automated test suites — unit tests for core logic, integration tests per provider, and end-to-end tests for common workflows. CI runs on every commit. | 1 |
 
 ---

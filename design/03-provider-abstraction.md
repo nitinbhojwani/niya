@@ -1,4 +1,4 @@
-# Nexus Component Design: Provider Abstraction
+# Niya Component Design: Provider Abstraction
 
 **Covers Requirements:** PROV-01 through PROV-07  
 **Status:** Draft  

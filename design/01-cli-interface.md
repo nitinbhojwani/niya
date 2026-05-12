@@ -1,4 +1,4 @@
-# Nexus Component Design: CLI Interface
+# Niya Component Design: CLI Interface
 
 **Covers Requirements:** CLI-01 through CLI-07  
 **Status:** Draft  
@@ -29,7 +29,7 @@ The CLI Interface is the user-facing layer. It handles argument parsing, runs th
 ### 3.1 CLI Entry Point
 
 ```
-nexus [options] [prompt]
+niya [options] [prompt]
 
 Options:
   --provider <name>       Override the default LLM provider

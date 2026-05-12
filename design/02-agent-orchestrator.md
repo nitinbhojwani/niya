@@ -1,4 +1,4 @@
-# Nexus Component Design: Agent Orchestrator
+# Niya Component Design: Agent Orchestrator
 
 **Covers Requirements:** TOOL-07, PERM-05 (dry-run), CTX-01 through CTX-03, WKFL-01/02 (Phase 2 prep)  
 **Status:** Draft  
@@ -110,7 +110,7 @@ interface SessionLogger {
 }
 ```
 
-Logs are written as JSON Lines to `<project-root>/.nexus/sessions/<session-id>.jsonl`.
+Logs are written as JSON Lines to `<project-root>/.niya/sessions/<session-id>.jsonl`.
 
 ---
 

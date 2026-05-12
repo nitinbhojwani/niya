@@ -224,7 +224,7 @@ These three criteria are paramount for a long-lived project. Extensibility is a 
 | **Module system** | `mod` + `pub`/`pub(crate)` gives fine-grained visibility control. You can expose a clean public API while keeping internals private. The file system maps 1:1 to the module tree. | Packages and modules work but visibility is convention-based (`_prefix` for private). No enforcement — anyone can import anything. | ES modules with `export`. Visibility is by omission (don't export it). No compiler-enforced encapsulation. |
 | **Interface contracts** | `trait` with required methods. The compiler enforces that every implementor satisfies the contract. Associated types and generics enable expressive, type-safe abstractions. | ABC (Abstract Base Class) with `@abstractmethod`. Enforcement is at instantiation time (runtime), not import time. Duck typing means contracts are often implicit. | `interface` declarations. Enforced at compile time by `tsc`. Less expressive than Rust traits (no associated types, no default impls). |
 | **Enums / sum types** | `enum` with data variants + exhaustive `match`. Perfect for modelling `OutputEvent`, `PermissionDecision`, `ChatResponseChunk`. Adding a new variant is a compile error everywhere it's not handled. | No native sum types. Approximated with `Union` type hints, `@dataclass`, and manual dispatch. Easy to miss a case. | Discriminated unions with `switch` narrowing. Good but not compiler-enforced exhaustiveness by default (needs `never` check). |
-| **Project structure** | Workspace with multiple crates (e.g., `nexus-core`, `nexus-cli`, `nexus-providers`). Clear dependency boundaries enforced by `Cargo.toml`. | Packages with `__init__.py`. Circular imports are a common pain point. No enforced dependency direction. | Monorepo with `packages/` or a single `src/` tree. No built-in dependency boundary enforcement (need tools like NX or turborepo). |
+| **Project structure** | Workspace with multiple crates (e.g., `niya-core`, `niya-cli`, `niya-providers`). Clear dependency boundaries enforced by `Cargo.toml`. | Packages with `__init__.py`. Circular imports are a common pain point. No enforced dependency direction. | Monorepo with `packages/` or a single `src/` tree. No built-in dependency boundary enforcement (need tools like NX or turborepo). |
 
 **Verdict:** Rust's module system, traits, and enums are purpose-built for the kind of interface-heavy, multi-component architecture in our design. Every component boundary from the architecture overview maps directly to a Rust crate or module with enforced contracts.
 
@@ -275,24 +275,24 @@ The slower MVP development speed is a real trade-off. Mitigation strategies incl
 To ground the recommendation, here is how the component architecture maps to Rust:
 
 ```
-nexus-workspace/                  (Cargo workspace)
+niya-workspace/                  (Cargo workspace)
 ├── Cargo.toml                    (workspace definition)
 ├── crates/
-│   ├── nexus-core/               (orchestrator, context manager, permission gate)
+│   ├── niya-core/               (orchestrator, context manager, permission gate)
 │   │   └── src/
 │   │       ├── lib.rs
 │   │       ├── orchestrator.rs   (agentic loop + unit tests at bottom)
 │   │       ├── context.rs        (context manager + unit tests)
 │   │       ├── permission.rs     (permission gate + unit tests)
 │   │       └── types.rs          (Message, OutputEvent, ToolResult, etc.)
-│   ├── nexus-providers/          (provider adapters)
+│   ├── niya-providers/          (provider adapters)
 │   │   └── src/
 │   │       ├── lib.rs            (ProviderAdapter trait)
 │   │       ├── anthropic.rs      (adapter + unit tests)
 │   │       ├── openai.rs         (adapter + unit tests)
 │   │       ├── ollama.rs         (adapter + unit tests)
 │   │       └── openai_compat.rs
-│   ├── nexus-tools/              (tool implementations)
+│   ├── niya-tools/              (tool implementations)
 │   │   └── src/
 │   │       ├── lib.rs            (Tool trait, ToolRegistry)
 │   │       ├── file_read.rs      (impl + unit tests)
@@ -301,13 +301,13 @@ nexus-workspace/                  (Cargo workspace)
 │   │       ├── shell.rs          (impl + unit tests)
 │   │       ├── glob.rs           (impl + unit tests)
 │   │       └── grep.rs           (impl + unit tests)
-│   ├── nexus-config/             (configuration system)
+│   ├── niya-config/             (configuration system)
 │   │   └── src/
 │   │       ├── lib.rs
 │   │       ├── loader.rs         (loading + unit tests)
 │   │       ├── schema.rs         (validation + unit tests)
 │   │       └── merge.rs          (merge logic + unit tests)
-│   └── nexus-cli/                (CLI interface — the binary crate)
+│   └── niya-cli/                (CLI interface — the binary crate)
 │       └── src/
 │           ├── main.rs
 │           ├── repl.rs
@@ -357,7 +357,7 @@ mod tests {
 
 **Integration tests — in the top-level `tests/` directory.** These are separate crates that can only access the *public* API of your library crates. They test cross-component behaviour: "given this prompt and this mock provider response, does the orchestrator produce the right tool calls and feed results back correctly?"
 
-**Why this matters for Nexus:** every component design doc defines interfaces (traits). Unit tests in each file verify that each implementation satisfies its trait contract. Integration tests verify that the components work together through their public APIs. There's no separate `__tests__/` folder to maintain or keep in sync — the tests are always right next to the code.
+**Why this matters for Niya:** every component design doc defines interfaces (traits). Unit tests in each file verify that each implementation satisfies its trait contract. Integration tests verify that the components work together through their public APIs. There's no separate `__tests__/` folder to maintain or keep in sync — the tests are always right next to the code.
 
 ### 6.2 TDD in Rust
 
@@ -382,7 +382,7 @@ The "Red" phase has two sub-steps that other languages don't. First the test won
 
 **Mocking with traits for DI:**
 
-Every major interface in the Nexus design is a trait. This makes dependency injection and mocking straightforward:
+Every major interface in the Niya design is a trait. This makes dependency injection and mocking straightforward:
 
 ```rust
 // In production code: the orchestrator accepts any ProviderAdapter
@@ -443,12 +443,12 @@ fn validates_provider_on_startup() {
 }
 ```
 
-**Useful testing crates for Nexus:**
+**Useful testing crates for Niya:**
 
 | Crate | Purpose |
 |---|---|
 | `mockall` | Auto-generate mock implementations from traits |
-| `assert_cmd` | Test CLI binaries (run `nexus` as a subprocess, check stdout/stderr/exit code) |
+| `assert_cmd` | Test CLI binaries (run `niya` as a subprocess, check stdout/stderr/exit code) |
 | `tempfile` | Create temp directories for file tool tests (auto-cleaned up) |
 | `wiremock` | Mock HTTP servers for provider adapter tests (simulate Anthropic/OpenAI APIs) |
 | `proptest` | Property-based testing (e.g., "for any valid config YAML, merge never panics") |

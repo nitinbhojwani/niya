@@ -47,8 +47,8 @@ regex = "1"
 dirs = "5"
 
 # Internal crates
-nexus-core = { path = "crates/nexus-core" }
-nexus-config = { path = "crates/nexus-config" }
-nexus-providers = { path = "crates/nexus-providers" }
-nexus-tools = { path = "crates/nexus-tools" }
-nexus-cli = { path = "crates/nexus-cli" }
+niya-core = { path = "crates/niya-core" }
+niya-config = { path = "crates/niya-config" }
+niya-providers = { path = "crates/niya-providers" }
+niya-tools = { path = "crates/niya-tools" }
+niya-cli = { path = "crates/niya-cli" }

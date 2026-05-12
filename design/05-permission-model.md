@@ -1,4 +1,4 @@
-# Nexus Component Design: Permission Model
+# Niya Component Design: Permission Model
 
 **Covers Requirements:** PERM-01 through PERM-05, TOOL-07  
 **Status:** Draft  
@@ -75,7 +75,7 @@ interface ArgCondition {
 ## 4. Configuration
 
 ```yaml
-# .nexus/config.yaml (project-level)
+# .niya/config.yaml (project-level)
 permissions:
   default: "ask"
 

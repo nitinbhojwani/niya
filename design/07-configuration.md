@@ -1,4 +1,4 @@
-# Nexus Component Design: Configuration System
+# Niya Component Design: Configuration System
 
 **Covers Requirements:** INST-01 through INST-03, PROV-03, PROV-04, PERM-03  
 **Status:** Draft  
@@ -60,14 +60,14 @@ interface ResolvedConfig {
   // Context settings
   context: {
     maxProjectContextLines: number      // default: 200
-    projectInstructionFile: string      // default: "NEXUS.md"
+    projectInstructionFile: string      // default: "NIYA.md"
     respectGitignore:       boolean     // default: true
   }
 
   // Session settings
   session: {
     maxIterations:      number          // default: 20
-    logDirectory:       string          // default: ".nexus/sessions"
+    logDirectory:       string          // default: ".niya/sessions"
     shellTimeout:       number          // default: 30000 (ms)
     shellOutputLimit:   number          // default: 100000 (chars)
   }
@@ -100,8 +100,8 @@ Priority (highest → lowest):
 
 1. CLI flags           --provider anthropic --model claude-sonnet-4-6 --no-color
 2. Environment vars    AGENT_DEFAULT_PROVIDER=anthropic
-3. Project config      <projectRoot>/.nexus/config.yaml
-4. Global config       ~/.nexus/config.yaml
+3. Project config      <projectRoot>/.niya/config.yaml
+4. Global config       ~/.niya/config.yaml
 5. Built-in defaults   (hardcoded sensible defaults)
 ```
 
@@ -117,7 +117,7 @@ Priority (highest → lowest):
 YAML is the primary format. The schema is the same for both global and project-level files.
 
 ```yaml
-# ~/.nexus/config.yaml (global)
+# ~/.niya/config.yaml (global)
 providers:
   anthropic:
     api_key: "${ANTHROPIC_API_KEY}"
@@ -154,7 +154,7 @@ display:
 ```
 
 ```yaml
-# <projectRoot>/.nexus/config.yaml (project-level override)
+# <projectRoot>/.niya/config.yaml (project-level override)
 default_provider: "ollama"             # this project uses local models
 
 permissions:
@@ -199,9 +199,9 @@ After merging and env-var resolution, the config is validated against a JSON Sch
 ```
 Error: Invalid configuration
   → providers.anthropic.api_key: must be a non-empty string
-    Source: ~/.nexus/config.yaml, line 3
+    Source: ~/.niya/config.yaml, line 3
   → session.max_iterations: must be a positive integer, got "abc"
-    Source: .nexus/config.yaml, line 8
+    Source: .niya/config.yaml, line 8
 ```
 
 ---
@@ -212,7 +212,7 @@ The project root is detected by walking up from the current working directory un
 
 ```
 Priority order:
-1. .nexus/          (nexus-specific config directory)
+1. .niya/          (niya-specific config directory)
 2. .git/            (git repository root)
 3. package.json     (Node.js project)
 4. Cargo.toml       (Rust project)
@@ -230,7 +230,7 @@ If no marker is found, the current working directory is used as the project root
 When `needsSetup()` returns true (no global config file exists), the agent runs an interactive setup:
 
 ```
-Welcome to Nexus! Let's get you set up.
+Welcome to Niya! Let's get you set up.
 
 Which LLM provider would you like to use?
   1. Anthropic (Claude)
@@ -246,10 +246,10 @@ Enter your Anthropic API key (or press Enter to use ANTHROPIC_API_KEY env var):
 Which model? (default: claude-sonnet-4-6)
 > 
 
-✓ Configuration saved to ~/.nexus/config.yaml
+✓ Configuration saved to ~/.niya/config.yaml
 ✓ Connection verified — you're ready to go!
 
-Type 'nexus' to start a session.
+Type 'niya' to start a session.
 ```
 
 ---
@@ -271,7 +271,7 @@ In MVP, options 1 and 2 are supported. The setup wizard recommends option 1.
 | Case | Behaviour |
 |---|---|
 | Config file has syntax errors (invalid YAML) | Print the parse error with file path and line number. Exit with code 1. |
-| Required field missing (e.g., no provider configured) | Print which field is missing and suggest running `nexus --setup`. Exit with code 1. |
+| Required field missing (e.g., no provider configured) | Print which field is missing and suggest running `niya --setup`. Exit with code 1. |
 | Environment variable not set | Warn at load time. If the variable is required (e.g., API key), error at provider validation. |
 | Both global and project config have conflicting values | Project config wins. No warning (this is expected behaviour). |
 
@@ -279,5 +279,5 @@ In MVP, options 1 and 2 are supported. The setup wizard recommends option 1.
 
 ## 12. Future Phase Notes
 
-- **Phase 2:** OS keychain integration for secure key storage. Config supports hook definitions and MCP server declarations. A `nexus config` sub-command provides get/set access.
+- **Phase 2:** OS keychain integration for secure key storage. Config supports hook definitions and MCP server declarations. A `niya config` sub-command provides get/set access.
 - **Phase 3:** Team config files are loaded from a remote source (e.g., a Git repo) and merged with the same precedence model. Org-level overrides are marked as non-overridable by individuals.

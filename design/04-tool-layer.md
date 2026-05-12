@@ -1,4 +1,4 @@
-# Nexus Component Design: Tool Layer
+# Niya Component Design: Tool Layer
 
 **Covers Requirements:** TOOL-01 through TOOL-06  
 **Status:** Draft  

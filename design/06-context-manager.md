@@ -1,4 +1,4 @@
-# Nexus Component Design: Context Manager
+# Niya Component Design: Context Manager
 
 **Covers Requirements:** CTX-01 through CTX-05  
 **Status:** Draft  
@@ -14,7 +14,7 @@ The Context Manager assembles the prompt sent to the LLM provider on every turn.
 ## 2. Responsibilities
 
 - Build and maintain the system prompt (static instructions + tool usage guidelines).
-- Auto-detect and include project context (README, directory structure, NEXUS.md).
+- Auto-detect and include project context (README, directory structure, NIYA.md).
 - Maintain the conversation history (user messages, assistant messages, tool results).
 - Track cumulative token usage and warn when approaching the context window limit.
 - Allow the user to manually add files to context (`/add`).
@@ -88,7 +88,7 @@ The assembled prompt has a defined structure:
 │    - Tool usage guidelines                  │
 │    - Output format instructions             │
 ├─────────────────────────────────────────────┤
-│ 2. Project Instructions (if NEXUS.md exists)│
+│ 2. Project Instructions (if NIYA.md exists)│
 │    - Project-specific conventions           │
 │    - Preferred libraries, patterns          │
 ├─────────────────────────────────────────────┤
@@ -135,7 +135,7 @@ function gatherProjectContext(projectRoot):
     context.add("README:\n" + content)
 
   // Project instructions
-  agentMd = findFile(projectRoot, ["NEXUS.md", ".nexus/instructions.md"])
+  agentMd = findFile(projectRoot, ["NIYA.md", ".niya/instructions.md"])
   if agentMd:
     context.add("Project instructions:\n" + readFile(agentMd))
 
@@ -197,7 +197,7 @@ function addFile(filePath):
 
 | Case | Behaviour |
 |---|---|
-| NEXUS.md not found | No error; project instructions section is simply omitted. |
+| NIYA.md not found | No error; project instructions section is simply omitted. |
 | File added via `/add` doesn't exist | Show error to user. Do not add to context. |
 | Context exceeds window after tool results | Trim early conversation history (section 4 priority rules). Log a warning. |
 | Token estimation is significantly off | Self-corrects using exact counts from the previous provider response. |
