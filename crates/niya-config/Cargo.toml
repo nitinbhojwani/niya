@@ -3,6 +3,11 @@ name = "niya-config"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+description = "Configuration loading, schema, and merge logic for Niya"
+keywords = ["configuration", "agent", "cli"]
+categories = ["config", "development-tools"]
 
 [dependencies]
 serde = { workspace = true }

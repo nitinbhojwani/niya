@@ -3,6 +3,11 @@ name = "niya"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+description = "CLI coding agent powered by the Niya workspace"
+keywords = ["agent", "cli", "llm", "automation"]
+categories = ["command-line-utilities", "development-tools"]
 
 [[bin]]
 name = "niya"

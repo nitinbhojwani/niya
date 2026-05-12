@@ -3,6 +3,11 @@ name = "niya-tools"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+description = "Tool implementations for shell and filesystem actions in Niya"
+keywords = ["tools", "filesystem", "shell"]
+categories = ["development-tools"]
 
 [dependencies]
 niya-core = { workspace = true }
