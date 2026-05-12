@@ -1002,7 +1002,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "niya-cli"
+name = "niya"
 version = "0.1.0"
 dependencies = [
  "anyhow",
