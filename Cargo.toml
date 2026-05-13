@@ -49,8 +49,8 @@ regex = "1"
 dirs = "5"
 
 # Internal crates
-niya-core = { path = "crates/niya-core" }
-niya-config = { path = "crates/niya-config" }
-niya-providers = { path = "crates/niya-providers" }
-niya-tools = { path = "crates/niya-tools" }
-niya = { path = "crates/niya" }
+niya-core = { path = "crates/niya-core", version = "0.1.0" }
+niya-config = { path = "crates/niya-config", version = "0.1.0" }
+niya-providers = { path = "crates/niya-providers", version = "0.1.0" }
+niya-tools = { path = "crates/niya-tools", version = "0.1.0" }
+niya = { path = "crates/niya", version = "0.1.0" }
