@@ -11,13 +11,20 @@ permissions:
   contents: write
   pull-requests: write
 
+concurrency:
+  group: release-pr
+  cancel-in-progress: true
+
 jobs:
   release-pr:
     runs-on: ubuntu-latest
     if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
+
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
