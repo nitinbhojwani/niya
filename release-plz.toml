@@ -1,0 +1,17 @@
+# Only niya gets a git tag; internal library crates are published but not tagged.
+
+[[package]]
+name = "niya-config"
+git_tag_enable = false
+
+[[package]]
+name = "niya-core"
+git_tag_enable = false
+
+[[package]]
+name = "niya-providers"
+git_tag_enable = false
+
+[[package]]
+name = "niya-tools"
+git_tag_enable = false
